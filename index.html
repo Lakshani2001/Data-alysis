@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DataMind AI — Intelligent Analytics Dashboard</title>
+  <meta name="description" content="Upload your CSV or Excel data and ask natural language questions to instantly get charts, insights, and answers powered by AI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow glow-1"></div>
+  <div class="bg-glow glow-2"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="16" cy="16" r="14" fill="url(#logoGrad)" opacity="0.15"/>
+            <path d="M8 20 L12 12 L16 17 L20 10 L24 14" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="24" cy="14" r="2.5" fill="#3b82f6"/>
+            <circle cx="8" cy="20" r="2" fill="#06b6d4"/>
+            <defs>
+              <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#3b82f6"/>
+                <stop offset="1" stop-color="#06b6d4"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <span class="logo-text">DataMind <span class="logo-ai">AI</span></span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-item active" data-page="dashboard" id="nav-dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-item" data-page="query" id="nav-query">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
+        <span>AI Query</span>
+        <span class="nav-badge">AI</span>
+      </a>
+      <a href="#" class="nav-item" data-page="data" id="nav-data">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        <span>Data View</span>
+      </a>
+      <a href="#" class="nav-item" data-page="charts" id="nav-charts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        <span>Charts</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-status" id="dataStatus">
+        <div class="status-dot"></div>
+        <span>No data loaded</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main" id="main">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+        <span class="page-subtitle" id="pageSubtitle">Upload data to get started</span>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-query-bar" id="topbarQueryBar">
+          <svg class="query-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><circle cx="12" cy="12" r="10"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <input type="text" id="topbarInput" class="topbar-input" placeholder='Try: "Show me a bar chart of sales by month"' />
+          <button class="topbar-ask-btn" id="topbarAskBtn">Ask AI</button>
+        </div>
+        <label class="upload-btn-mini" for="fileInputMini" title="Upload file">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </label>
+        <input type="file" id="fileInputMini" accept=".csv,.xlsx,.xls" style="display:none" />
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="pages-wrapper">
+
+      <!-- DASHBOARD PAGE -->
+      <section class="page active" id="page-dashboard">
+        <!-- Upload zone (shown when no data) -->
+        <div class="upload-zone" id="uploadZone">
+          <div class="upload-zone-inner">
+            <div class="upload-icon-wrap">
+              <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="32" cy="32" r="30" fill="url(#upGrad)" opacity="0.1"/>
+                <path d="M32 44V28M24 36l8-8 8 8" stroke="url(#upGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 44h24" stroke="url(#upGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                <defs>
+                  <linearGradient id="upGrad" x1="0" y1="0" x2="64" y2="64">
+                    <stop stop-color="#3b82f6"/><stop offset="1" stop-color="#06b6d4"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+            <h2>Upload your data file</h2>
+            <p>Drag & drop a CSV or Excel file here, or click to browse</p>
+            <label for="fileInput" class="upload-cta-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Choose File
+            </label>
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display:none" />
+            <div class="upload-formats">Supports: CSV, XLSX, XLS</div>
+            <div class="divider-or"><span>or try sample data</span></div>
+            <div class="sample-buttons">
+              <button class="sample-btn" data-sample="sales" id="sampleSalesBtn">📊 Sales Data</button>
+              <button class="sample-btn" data-sample="manufacturing" id="sampleMfgBtn">🏭 Manufacturing</button>
+              <button class="sample-btn" data-sample="hr" id="sampleHrBtn">👥 HR Analytics</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dashboard content (shown when data loaded) -->
+        <div class="dashboard-content hidden" id="dashboardContent">
+          <!-- KPI row -->
+          <div class="kpi-row" id="kpiRow"></div>
+          <!-- AI insight banner -->
+          <div class="ai-insight-banner" id="aiInsightBanner">
+            <div class="ai-insight-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a7 7 0 0 1 7 7c0 2.38-1.19 4.47-3 5.74V17a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1v-2.26A7 7 0 0 1 12 2z"/><path d="M9 21h6"/><path d="M9 18h6"/></svg>
+            </div>
+            <div class="ai-insight-text">
+              <strong>AI Insight:</strong> <span id="aiInsightText">Analyzing your data...</span>
+            </div>
+            <button class="ai-insight-refresh" id="refreshInsightBtn" title="Generate new insight">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </button>
+          </div>
+          <!-- Charts row -->
+          <div class="charts-row" id="chartsRow">
+            <div class="chart-card" id="primaryChartCard">
+              <div class="chart-card-header">
+                <span class="chart-card-title" id="primaryChartTitle">Overview</span>
+                <div class="chart-type-tabs">
+                  <button class="chart-type-tab active" data-type="bar">Bar</button>
+                  <button class="chart-type-tab" data-type="line">Line</button>
+                  <button class="chart-type-tab" data-type="pie">Pie</button>
+                </div>
+              </div>
+              <div class="chart-wrap"><canvas id="primaryChart"></canvas></div>
+            </div>
+            <div class="chart-card" id="secondaryChartCard">
+              <div class="chart-card-header">
+                <span class="chart-card-title" id="secondaryChartTitle">Distribution</span>
+              </div>
+              <div class="chart-wrap"><canvas id="secondaryChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI QUERY PAGE -->
+      <section class="page" id="page-query">
+        <div class="query-page-layout">
+          <div class="query-main-panel">
+            <div class="query-hero">
+              <div class="query-hero-icon">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="24" cy="24" r="22" fill="url(#qGrad)" opacity="0.15"/>
+                  <path d="M24 14c-5.52 0-10 4.48-10 10s4.48 10 10 10 10-4.48 10-10S29.52 14 24 14z" stroke="url(#qGrad)" stroke-width="2"/>
+                  <path d="M24 20v4l3 3" stroke="url(#qGrad)" stroke-width="2" stroke-linecap="round"/>
+                  <defs><linearGradient id="qGrad" x1="0" y1="0" x2="48" y2="48"><stop stop-color="#3b82f6"/><stop offset="1" stop-color="#a855f7"/></linearGradient></defs>
+                </svg>
+              </div>
+              <h2>Ask your data anything</h2>
+              <p>Type a natural language question and get instant charts & answers</p>
+            </div>
+            <div class="query-input-wrap">
+              <div class="query-input-box">
+                <svg class="query-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <textarea id="queryInput" class="query-textarea" placeholder="e.g. What are the 3 lines with lowest efficiency last month?" rows="2"></textarea>
+                <button class="query-submit-btn" id="querySubmitBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
+              </div>
+              <div class="query-suggestions" id="querySuggestions">
+                <span class="suggestions-label">Try:</span>
+                <button class="suggestion-chip" data-query="Show me a bar chart of the top 5 categories by value">Top 5 categories</button>
+                <button class="suggestion-chip" data-query="What is the average value per column?">Column averages</button>
+                <button class="suggestion-chip" data-query="Show me a line chart of trends over time">Trends over time</button>
+                <button class="suggestion-chip" data-query="Which row has the highest total value?">Highest value row</button>
+                <button class="suggestion-chip" data-query="Show a pie chart of the distribution">Distribution chart</button>
+              </div>
+            </div>
+            <!-- Query results -->
+            <div class="query-results" id="queryResults"></div>
+          </div>
+          <div class="query-history-panel">
+            <h3 class="panel-heading">Query History</h3>
+            <div class="query-history-list" id="queryHistoryList">
+              <div class="empty-history">No queries yet</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DATA VIEW PAGE -->
+      <section class="page" id="page-data">
+        <div class="data-view-wrap">
+          <div class="data-view-toolbar">
+            <input type="text" id="tableSearch" class="table-search-input" placeholder="Search data..." />
+            <span class="data-info" id="dataInfo">No data loaded</span>
+            <button class="export-btn" id="exportCsvBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export CSV
+            </button>
+          </div>
+          <div class="table-container" id="tableContainer">
+            <div class="empty-state">Upload a file to view data</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHARTS PAGE -->
+      <section class="page" id="page-charts">
+        <div class="charts-builder-wrap">
+          <div class="chart-builder-controls">
+            <h3 class="panel-heading">Chart Builder</h3>
+            <div class="control-group">
+              <label>Chart Type</label>
+              <div class="chart-type-selector" id="builderChartTypeSelector">
+                <button class="chart-type-pill active" data-type="bar">📊 Bar</button>
+                <button class="chart-type-pill" data-type="line">📈 Line</button>
+                <button class="chart-type-pill" data-type="pie">🥧 Pie</button>
+                <button class="chart-type-pill" data-type="scatter">⚫ Scatter</button>
+                <button class="chart-type-pill" data-type="doughnut">🍩 Doughnut</button>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="xAxisSelect">X Axis (Label)</label>
+              <select id="xAxisSelect" class="axis-select"><option>-- Load data first --</option></select>
+            </div>
+            <div class="control-group">
+              <label for="yAxisSelect">Y Axis (Value)</label>
+              <select id="yAxisSelect" class="axis-select"><option>-- Load data first --</option></select>
+            </div>
+            <div class="control-group">
+              <label for="rowLimitSelect">Rows to show</label>
+              <select id="rowLimitSelect" class="axis-select">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="all">All</option>
+              </select>
+            </div>
+            <button class="build-chart-btn" id="buildChartBtn">Generate Chart</button>
+          </div>
+          <div class="chart-builder-preview">
+            <div class="chart-card full-height">
+              <div class="chart-card-header">
+                <span class="chart-card-title" id="builderChartTitle">Chart Preview</span>
+              </div>
+              <div class="chart-wrap tall"><canvas id="builderChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast notification -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Loading overlay -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <span>Processing...</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
